@@ -1,0 +1,60 @@
+<script type="text/javascript">
+  RED.nodes.registerType("ui-system-monitor", {
+    category: "dashboard",
+    color: "#D9E8F5",
+    defaults: {
+      name: { value: "" },
+      group: { type: "ui-group", required: true },
+      order: { value: 0 },
+      width: { value: 0 },
+      height: { value: 0 },
+      updateInterval: {
+        value: 1000,
+        required: true,
+        validate: RED.validators.number(),
+      },
+    },
+    inputs: 0,
+    outputs: 0,
+    icon: "font-awesome/fa-desktop",
+    paletteLabel: "system-monitor",
+    label: function () {
+      return this.name || "system-monitor";
+    },
+    oneditprepare: function () {
+      $("#node-input-size").elementSizer({
+        width: "#node-input-width",
+        height: "#node-input-height",
+        group: "#node-input-group",
+      });
+    },
+  });
+</script>
+
+<script type="text/html" data-template-name="ui-system-monitor">
+  <div class="form-row">
+    <label for="node-input-name"><i class="fa fa-tag"></i> Name</label>
+    <input type="text" id="node-input-name" />
+  </div>
+  <div class="form-row">
+    <label for="node-input-group"><i class="fa fa-table"></i> Group</label>
+    <input type="text" id="node-input-group" />
+  </div>
+  <div class="form-row">
+    <label><i class="fa fa-object-group"></i> Size</label>
+    <input type="hidden" id="node-input-width" />
+    <input type="hidden" id="node-input-height" />
+    <button class="editor-button" id="node-input-size"></button>
+  </div>
+  <div class="form-row">
+    <label for="node-input-updateInterval">
+      <i class="fa fa-refresh"></i> Update interval (ms)
+    </label>
+    <input type="number" id="node-input-updateInterval" min="250" step="50" />
+  </div>
+</script>
+
+<script type="text/html" data-help-name="ui-system-monitor">
+  <p>System monitor dashboard widget for Node-RED Dashboard 2.</p>
+  <p>Configure the target group, size, and update interval.</p>
+</script>

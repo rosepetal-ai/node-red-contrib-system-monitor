@@ -1,0 +1,58 @@
+{
+  "name": "node-red-dashboard-2-system-monitor",
+  "version": "1.0.0",
+  "description": "System monitor dashboard widget for Node-RED Dashboard 2.",
+  "main": "node-red-contrib-system-monitor/system-monitor.js",
+  "scripts": {
+    "build": "vite build --config vite.config.mjs",
+    "build:dev": "NODE_ENV=development vite build --config vite.config.mjs",
+    "dev": "NODE_ENV=development vite build --config vite.config.mjs --watch",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/rosepetal-ai/node-red-contrib-system-monitor.git"
+  },
+  "keywords": [
+    "node-red",
+    "dashboard",
+    "system",
+    "monitor",
+    "gpu",
+    "nvidia",
+    "linux"
+  ],
+  "author": "Rosepetal SL (https://www.rosepetal.ai)",
+  "contributors": [
+    {
+      "name": "Victor Gonzalez Bentue",
+      "email": "victor.gonzalez@rosepetal.ai"
+    }
+  ],
+  "license": "Apache-2.0",
+  "bugs": {
+    "url": "https://github.com/rosepetal-ai/node-red-contrib-system-monitor/issues"
+  },
+  "homepage": "https://github.com/rosepetal-ai/node-red-contrib-system-monitor#readme",
+  "node-red": {
+    "version": ">=1.0.0",
+    "nodes": {
+      "ui-system-monitor": "node-red-contrib-system-monitor/system-monitor.js"
+    }
+  },
+  "node-red-dashboard-2": {
+    "widgets": {
+      "ui-system-monitor": {
+        "output": "system-monitor.js",
+        "component": "SystemMonitor"
+      }
+    }
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^5.2.3",
+    "vite": "^5.0.13",
+    "vite-plugin-css-injected-by-js": "^3.5.2",
+    "vue": "^3.5.13",
+    "vuex": "^4.1.0"
+  }
+}
