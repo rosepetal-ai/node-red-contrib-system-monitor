@@ -954,7 +954,7 @@ function getCpuColumns(cpuCount) {
   display: grid;
   grid-template-columns: minmax(240px, 35fr) minmax(320px, 65fr);
   gap: 8px;
-  --bottom-panels-height: 360px;
+  --bottom-panels-height: 400px;
 }
 
 .gpu-panel {
