@@ -95,7 +95,8 @@
               <span class="disk-col mount">Mount</span>
               <span class="disk-col fs">FS</span>
               <span class="disk-col used">Used</span>
-              <span class="disk-col free">Free</span>
+              <span class="disk-col used-bytes">Used</span>
+              <span class="disk-col total-bytes">Total</span>
               <span class="disk-col rate">Read/s</span>
               <span class="disk-col rate">Write/s</span>
             </div>
@@ -107,9 +108,9 @@
                 <div class="disk-used-bar">
                   <div class="disk-used-fill" :style="meterStyle(item.usedPercent)" />
                 </div>
-                <span class="disk-used-pct">{{ formatPercent(item.usedPercent) }}</span>
               </div>
-              <span class="disk-col free">{{ formatBytes(item.freeBytes) }}</span>
+              <span class="disk-col used-bytes">{{ formatBytes(item.usedBytes) }}</span>
+              <span class="disk-col total-bytes">{{ formatBytes(item.totalBytes) }}</span>
               <span class="disk-col rate">{{ formatRate(item.readBps) }}</span>
               <span class="disk-col rate">{{ formatRate(item.writeBps) }}</span>
             </div>
@@ -197,24 +198,8 @@
         <div class="process-panel">
           <div v-if="sortedProcesses.length" class="process-table">
             <div class="process-row process-head">
-              <button
-                type="button"
-                class="process-sort proc-col pid numeric"
-                :class="{ active: isProcessSortActive('pid') }"
-                @click="toggleProcessSort('pid')"
-              >
-                <span>PID</span>
-                <span v-if="isProcessSortActive('pid')" class="sort-indicator">{{ processSortIndicator("pid") }}</span>
-              </button>
-              <button
-                type="button"
-                class="process-sort proc-col user"
-                :class="{ active: isProcessSortActive('user') }"
-                @click="toggleProcessSort('user')"
-              >
-                <span>User</span>
-                <span v-if="isProcessSortActive('user')" class="sort-indicator">{{ processSortIndicator("user") }}</span>
-              </button>
+              <span class="process-head-label proc-col pid numeric">PID</span>
+              <span class="process-head-label proc-col user">User</span>
               <button
                 type="button"
                 class="process-sort proc-col virt numeric"
@@ -251,24 +236,8 @@
                 <span>CPU</span>
                 <span v-if="isProcessSortActive('cpuPercent')" class="sort-indicator">{{ processSortIndicator("cpuPercent") }}</span>
               </button>
-              <button
-                type="button"
-                class="process-sort proc-col type"
-                :class="{ active: isProcessSortActive('type') }"
-                @click="toggleProcessSort('type')"
-              >
-                <span>Type</span>
-                <span v-if="isProcessSortActive('type')" class="sort-indicator">{{ processSortIndicator("type") }}</span>
-              </button>
-              <button
-                type="button"
-                class="process-sort proc-col command"
-                :class="{ active: isProcessSortActive('command') }"
-                @click="toggleProcessSort('command')"
-              >
-                <span>Command</span>
-                <span v-if="isProcessSortActive('command')" class="sort-indicator">{{ processSortIndicator("command") }}</span>
-              </button>
+              <span class="process-head-label proc-col type">Type</span>
+              <span class="process-head-label proc-col command">Command</span>
             </div>
 
             <div class="process-body">
@@ -364,19 +333,23 @@ const processItems = computed(() => {
 });
 
 const processSortKey = ref("cpuPercent");
-const processSortDescending = ref(true);
+const processSortableKeys = new Set([
+  "virtBytes",
+  "resBytes",
+  "shrBytes",
+  "cpuPercent",
+]);
 
 const sortedProcesses = computed(() => {
   const key = processSortKey.value;
-  const descending = processSortDescending.value;
   const items = [...processItems.value];
 
   items.sort((a, b) => {
     const valueA = getProcessSortValue(a, key);
     const valueB = getProcessSortValue(b, key);
-    const cmp = compareSortValues(valueA, valueB);
+    const cmp = compareNumericDesc(valueA, valueB);
     if (cmp !== 0) {
-      return descending ? -cmp : cmp;
+      return cmp;
     }
 
     const pidA = typeof a?.pid === "number" ? a.pid : Number.MAX_SAFE_INTEGER;
@@ -458,13 +431,10 @@ onBeforeUnmount(() => {
 });
 
 function toggleProcessSort(nextKey) {
-  if (processSortKey.value === nextKey) {
-    processSortDescending.value = !processSortDescending.value;
+  if (!processSortableKeys.has(nextKey)) {
     return;
   }
-
   processSortKey.value = nextKey;
-  processSortDescending.value = true;
 }
 
 function isProcessSortActive(key) {
@@ -475,7 +445,7 @@ function processSortIndicator(key) {
   if (processSortKey.value !== key) {
     return "";
   }
-  return processSortDescending.value ? "▼" : "▲";
+  return "▼";
 }
 
 function processTypeBadgeClass(type) {
@@ -494,10 +464,6 @@ function getProcessSortValue(item, key) {
   }
 
   switch (key) {
-    case "pid":
-      return item.pid;
-    case "user":
-      return item.user;
     case "virtBytes":
       return item.virtBytes;
     case "resBytes":
@@ -506,29 +472,17 @@ function getProcessSortValue(item, key) {
       return item.shrBytes;
     case "cpuPercent":
       return item.cpuPercent;
-    case "type":
-      return item.type;
-    case "command":
-      return item.command;
     default:
       return null;
   }
 }
 
-function compareSortValues(a, b) {
-  const isNumberA = typeof a === "number" && Number.isFinite(a);
-  const isNumberB = typeof b === "number" && Number.isFinite(b);
-  if (isNumberA || isNumberB) {
-    const valueA = isNumberA ? a : Number.NEGATIVE_INFINITY;
-    const valueB = isNumberB ? b : Number.NEGATIVE_INFINITY;
-    if (valueA < valueB) return -1;
-    if (valueA > valueB) return 1;
-    return 0;
-  }
-
-  const stringA = String(a || "").toLowerCase();
-  const stringB = String(b || "").toLowerCase();
-  return stringA.localeCompare(stringB);
+function compareNumericDesc(a, b) {
+  const valueA = typeof a === "number" && Number.isFinite(a) ? a : Number.NEGATIVE_INFINITY;
+  const valueB = typeof b === "number" && Number.isFinite(b) ? b : Number.NEGATIVE_INFINITY;
+  if (valueA > valueB) return -1;
+  if (valueA < valueB) return 1;
+  return 0;
 }
 
 function clampPercent(value) {
@@ -894,7 +848,7 @@ function getCpuColumns(cpuCount) {
 
 .disk-row {
   display: grid;
-  grid-template-columns: minmax(92px, 1.8fr) 46px minmax(100px, 1.5fr) 64px 64px 64px;
+  grid-template-columns: minmax(86px, 1.6fr) 40px minmax(80px, 1.3fr) 62px 62px 62px 62px;
   align-items: center;
   gap: 5px;
   min-height: 22px;
@@ -927,7 +881,8 @@ function getCpuColumns(cpuCount) {
 }
 
 .disk-col.fs,
-.disk-col.free,
+.disk-col.used-bytes,
+.disk-col.total-bytes,
 .disk-col.rate,
 .net-col.rate,
 .net-col.cap,
@@ -943,6 +898,7 @@ function getCpuColumns(cpuCount) {
   display: flex;
   align-items: center;
   gap: 5px;
+  padding-right: 4px;
 }
 
 .disk-used-bar,
@@ -965,7 +921,6 @@ function getCpuColumns(cpuCount) {
   transition: width 140ms linear, background-color 140ms linear;
 }
 
-.disk-used-pct,
 .gpu-pct {
   width: 34px;
   text-align: right;
@@ -1056,6 +1011,20 @@ function getCpuColumns(cpuCount) {
 
 .process-body .process-row:hover {
   background: rgba(23, 53, 110, 0.06);
+}
+
+.process-head-label {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  color: rgba(0, 0, 0, 0.52);
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.process-head-label.numeric {
+  justify-content: flex-end;
+  text-align: right;
 }
 
 .process-sort {
@@ -1284,7 +1253,7 @@ function getCpuColumns(cpuCount) {
   }
 
   .disk-row {
-    grid-template-columns: minmax(90px, 1.6fr) 44px minmax(96px, 1.4fr) 64px 64px 64px;
+    grid-template-columns: minmax(74px, 1.4fr) 34px minmax(72px, 1.2fr) 56px 56px 56px 56px;
     font-size: 10px;
   }
 

@@ -12,6 +12,7 @@ const PAGE_SIZE_BYTES = 4096;
 const DEFAULT_OPTIONS = {
   userRefreshMs: 5 * 60 * 1000,
   readConcurrency: 48,
+  topPerMetric: 50,
 };
 
 function parseTotalCpuTicks(raw) {
@@ -143,6 +144,43 @@ async function mapLimit(items, limit, iteratee) {
   }
   await Promise.all(workers);
   return results;
+}
+
+function pickTopByMetric(items, selector, limit) {
+  if (!Number.isFinite(limit) || limit <= 0) {
+    return [];
+  }
+
+  return items
+    .filter((item) => {
+      const value = selector(item);
+      return Number.isFinite(value);
+    })
+    .sort((a, b) => selector(b) - selector(a))
+    .slice(0, limit);
+}
+
+function pickTopUnion(items, limit) {
+  const selectedByPid = new Map();
+  const pickers = [
+    (item) => item.virtBytes,
+    (item) => item.resBytes,
+    (item) => item.shrBytes,
+    (item) => item.cpuPercent,
+  ];
+
+  for (let i = 0; i < pickers.length; i += 1) {
+    const topItems = pickTopByMetric(items, pickers[i], limit);
+    for (let j = 0; j < topItems.length; j += 1) {
+      const item = topItems[j];
+      if (typeof item.pid !== "number" || Number.isNaN(item.pid)) {
+        continue;
+      }
+      selectedByPid.set(item.pid, item);
+    }
+  }
+
+  return Array.from(selectedByPid.values());
 }
 
 class ProcessSampler extends Sampler {
@@ -279,12 +317,16 @@ class ProcessSampler extends Sampler {
     this.prevTotalTicks = Number.isFinite(totalTicks) ? totalTicks : this.prevTotalTicks;
     this.prevProcessTicks = nextProcessTicks;
 
+    const selectedItems = pickTopUnion(items, this.options.topPerMetric);
+
     return {
       timestamp,
       summary: {
-        processes: items.length,
+        scannedProcesses: items.length,
+        processes: selectedItems.length,
+        topPerMetric: this.options.topPerMetric,
       },
-      items,
+      items: selectedItems,
     };
   }
 }
