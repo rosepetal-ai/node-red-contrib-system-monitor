@@ -3,6 +3,8 @@
 const fs = require("fs/promises");
 const { CpuSampler } = require("./lib/cpu");
 const { MemorySampler } = require("./lib/memory");
+const { DiskSampler } = require("./lib/disk");
+const { NetworkSampler } = require("./lib/network");
 
 const TASK_THREAD_REFRESH_MS = 5000;
 
@@ -47,6 +49,8 @@ module.exports = function (RED) {
 
     const cpuSampler = CpuSampler.create();
     const memorySampler = MemorySampler.create();
+    const diskSampler = DiskSampler.create();
+    const networkSampler = NetworkSampler.create();
     const updateInterval = Math.max(
       250,
       Number.parseInt(config.updateInterval, 10) || 1000
@@ -57,6 +61,8 @@ module.exports = function (RED) {
     let lastTaskThreadUpdate = 0;
     let lastTaskThread = { tasks: null, threads: null };
     let lastMemory = { ram: null, swap: null };
+    let lastDisk = { summary: null, items: [] };
+    let lastNetwork = { summary: null, items: [] };
 
     async function tick() {
       if (busy) {
@@ -70,6 +76,8 @@ module.exports = function (RED) {
         const needsTaskThreadRefresh =
           now - lastTaskThreadUpdate >= TASK_THREAD_REFRESH_MS;
         const memoryPromise = memorySampler.getMetrics();
+        const diskPromise = diskSampler.getMetrics();
+        const networkPromise = networkSampler.getMetrics();
         const taskThreadPromise = needsTaskThreadRefresh
           ? getTaskThreadCounts()
           : null;
@@ -78,6 +86,17 @@ module.exports = function (RED) {
           lastMemory = await memoryPromise;
         } catch (err) {
           node.debug?.(`memory read failed: ${err.message}`);
+        }
+
+        try {
+          lastDisk = await diskPromise;
+        } catch (err) {
+          node.debug?.(`disk read failed: ${err.message}`);
+        }
+        try {
+          lastNetwork = await networkPromise;
+        } catch (err) {
+          node.debug?.(`network read failed: ${err.message}`);
         }
 
         if (needsTaskThreadRefresh) {
@@ -96,6 +115,8 @@ module.exports = function (RED) {
             threads: lastTaskThread.threads,
           },
           memory: lastMemory,
+          disk: lastDisk,
+          network: lastNetwork,
         };
 
         const msg = { payload };

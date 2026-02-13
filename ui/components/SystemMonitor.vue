@@ -72,6 +72,71 @@
           </div>
         </div>
       </div>
+
+      <div class="io-grid">
+        <div class="panel disk-panel">
+          <div class="panel-title">Disk</div>
+          <div v-if="diskItems.length" class="disk-table">
+            <div class="disk-row disk-head">
+              <span class="disk-col mount">Mount</span>
+              <span class="disk-col fs">FS</span>
+              <span class="disk-col used">Used</span>
+              <span class="disk-col free">Free</span>
+              <span class="disk-col rate">Read/s</span>
+              <span class="disk-col rate">Write/s</span>
+            </div>
+
+            <div
+              v-for="item in diskItems"
+              :key="item.id"
+              class="disk-row"
+            >
+              <span class="disk-col mount" :title="item.source">{{ item.mountPoint }}</span>
+              <span class="disk-col fs">{{ item.fsType }}</span>
+              <div class="disk-col used used-col">
+                <div class="disk-used-bar">
+                  <div class="disk-used-fill" :style="meterStyle(item.usedPercent)" />
+                </div>
+                <span class="disk-used-pct">{{ formatPercent(item.usedPercent) }}</span>
+              </div>
+              <span class="disk-col free">{{ formatBytes(item.freeBytes) }}</span>
+              <span class="disk-col rate">{{ formatRate(item.readBps) }}</span>
+              <span class="disk-col rate">{{ formatRate(item.writeBps) }}</span>
+            </div>
+          </div>
+          <div v-else class="empty-text">Waiting for disk data...</div>
+        </div>
+
+        <div class="panel network-panel">
+          <div class="panel-title">Network</div>
+          <div v-if="networkItems.length" class="network-table">
+            <div class="network-row network-head">
+              <span class="net-col iface">Iface</span>
+              <span class="net-col state">State</span>
+              <span class="net-col rate">Down/s</span>
+              <span class="net-col rate">Up/s</span>
+              <span class="net-col total">Rx Total</span>
+              <span class="net-col total">Tx Total</span>
+            </div>
+
+            <div
+              v-for="item in networkItems"
+              :key="item.iface"
+              class="network-row"
+            >
+              <span class="net-col iface">{{ item.iface }}</span>
+              <span class="net-col state" :class="item.state === 'up' ? 'state-up' : 'state-down'">
+                {{ item.state }}
+              </span>
+              <span class="net-col rate">{{ formatRate(item.rxBps) }}</span>
+              <span class="net-col rate">{{ formatRate(item.txBps) }}</span>
+              <span class="net-col total">{{ formatBytes(item.rxBytes) }}</span>
+              <span class="net-col total">{{ formatBytes(item.txBytes) }}</span>
+            </div>
+          </div>
+          <div v-else class="empty-text">Waiting for network data...</div>
+        </div>
+      </div>
     </v-card>
   </div>
 </template>
@@ -88,10 +153,12 @@ const props = defineProps({
 const store = useStore();
 const socket = inject("$socket", null);
 
-const widgetTitle = computed(() => props.props?.name || "system-monitor");
+const widgetTitle = computed(() => props.props?.name || "Usage / core");
 const message = computed(() => store.state?.data?.messages?.[props.id] || null);
 const cpu = computed(() => message.value?.payload?.cpu || null);
 const memory = computed(() => message.value?.payload?.memory || null);
+const disk = computed(() => message.value?.payload?.disk || null);
+const network = computed(() => message.value?.payload?.network || null);
 
 const ram = computed(() => memory.value?.ram || null);
 const swap = computed(() => memory.value?.swap || null);
@@ -111,6 +178,15 @@ const ramUsageLabel = computed(() => {
 const swapUsageLabel = computed(() => {
   if (!swap.value) return "-";
   return `${formatBytes(swap.value.usedBytes)} / ${formatBytes(swap.value.totalBytes)}`;
+});
+
+const diskItems = computed(() => {
+  const items = Array.isArray(disk.value?.items) ? disk.value.items : [];
+  return items;
+});
+const networkItems = computed(() => {
+  const items = Array.isArray(network.value?.items) ? network.value.items : [];
+  return items;
 });
 
 const cpuCells = computed(() => {
@@ -258,6 +334,17 @@ function formatBytes(bytes) {
 
   const decimals = value >= 10 || unitIndex === 0 ? 0 : 1;
   return `${value.toFixed(decimals)} ${units[unitIndex]}`;
+}
+
+function formatRate(bytesPerSecond) {
+  if (
+    typeof bytesPerSecond !== "number" ||
+    Number.isNaN(bytesPerSecond) ||
+    bytesPerSecond < 0
+  ) {
+    return "-";
+  }
+  return `${formatBytes(bytesPerSecond)}/s`;
 }
 
 function getCpuColumns(cpuCount) {
@@ -433,6 +520,131 @@ function getCpuColumns(cpuCount) {
   color: rgba(0, 0, 0, 0.9);
 }
 
+.disk-panel {
+  gap: 8px;
+}
+
+.io-grid {
+  display: grid;
+  grid-template-columns: minmax(280px, 1fr) minmax(280px, 1fr);
+  gap: 10px;
+}
+
+.disk-table {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.disk-row {
+  display: grid;
+  grid-template-columns: minmax(100px, 1.8fr) 52px minmax(110px, 1.5fr) 72px 72px 72px;
+  align-items: center;
+  gap: 6px;
+  min-height: 24px;
+  font-size: 11px;
+}
+
+.disk-head {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: rgba(0, 0, 0, 0.6);
+}
+
+.disk-col {
+  min-width: 0;
+}
+
+.disk-col.mount {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.disk-col.fs,
+.disk-col.free,
+.disk-col.rate {
+  color: rgba(0, 0, 0, 0.78);
+}
+
+.used-col {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.disk-used-bar {
+  position: relative;
+  flex: 1;
+  height: 8px;
+  border-radius: 6px;
+  overflow: hidden;
+  background: rgba(0, 0, 0, 0.08);
+}
+
+.disk-used-fill {
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  border-radius: 6px;
+  transition: width 140ms linear, background-color 140ms linear;
+}
+
+.disk-used-pct {
+  width: 38px;
+  text-align: right;
+  color: rgba(0, 0, 0, 0.78);
+}
+
+.network-panel {
+  gap: 8px;
+}
+
+.network-table {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.network-row {
+  display: grid;
+  grid-template-columns: minmax(70px, 1.2fr) 44px 74px 74px 74px 74px;
+  align-items: center;
+  gap: 6px;
+  min-height: 24px;
+  font-size: 11px;
+}
+
+.network-head {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: rgba(0, 0, 0, 0.6);
+}
+
+.net-col {
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.net-col.rate,
+.net-col.total,
+.net-col.state {
+  color: rgba(0, 0, 0, 0.78);
+}
+
+.state-up {
+  color: #0d8f39;
+}
+
+.state-down {
+  color: #c23b22;
+}
+
 @media (max-width: 960px) {
   .cpu-mini-bar {
     width: 70px;
@@ -452,6 +664,29 @@ function getCpuColumns(cpuCount) {
 @media (max-width: 680px) {
   .bottom-grid {
     grid-template-columns: 1fr;
+  }
+
+  .io-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .disk-row {
+    grid-template-columns: minmax(90px, 1.6fr) 44px minmax(96px, 1.4fr) 64px 64px 64px;
+    gap: 6px;
+    font-size: 10px;
+  }
+
+  .disk-head {
+    font-size: 10px;
+  }
+
+  .network-row {
+    grid-template-columns: minmax(70px, 1.2fr) 40px 64px 64px 64px 64px;
+    font-size: 10px;
+  }
+
+  .network-head {
+    font-size: 9px;
   }
 }
 </style>
