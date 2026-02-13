@@ -1,5 +1,5 @@
 {
-  "name": "node-red-dashboard-2-system-monitor",
+  "name": "@rosepetal/node-red-contrib-system-monitor",
   "version": "1.0.0",
   "description": "System monitor dashboard widget for Node-RED Dashboard 2.",
   "main": "node-red-contrib-system-monitor/system-monitor.js",
