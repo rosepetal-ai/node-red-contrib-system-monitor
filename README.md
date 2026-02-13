@@ -1,4 +1,4 @@
-# @rosepetal/node-red-contrib-system-monitor
+# @rosepetal/node-red-dashboard-2-system-monitor
 
 System monitor widget for **Node-RED Dashboard 2** (Linux-focused, NVIDIA GPU support).
 
@@ -31,7 +31,7 @@ System monitor widget for **Node-RED Dashboard 2** (Linux-focused, NVIDIA GPU su
 ## Install
 
 ```bash
-npm install @rosepetal/node-red-contrib-system-monitor
+npm install @rosepetal/node-red-dashboard-2-system-monitor
 ```
 
 Or install from the Node-RED Palette Manager using the same package name.
