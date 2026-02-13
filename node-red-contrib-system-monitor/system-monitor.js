@@ -5,6 +5,8 @@ const { CpuSampler } = require("./lib/cpu");
 const { MemorySampler } = require("./lib/memory");
 const { DiskSampler } = require("./lib/disk");
 const { NetworkSampler } = require("./lib/network");
+const { GpuSampler } = require("./lib/gpu");
+const { ProcessSampler } = require("./lib/processes");
 
 const TASK_THREAD_REFRESH_MS = 5000;
 
@@ -51,6 +53,8 @@ module.exports = function (RED) {
     const memorySampler = MemorySampler.create();
     const diskSampler = DiskSampler.create();
     const networkSampler = NetworkSampler.create();
+    const gpuSampler = GpuSampler.create();
+    const processSampler = ProcessSampler.create();
     const updateInterval = Math.max(
       250,
       Number.parseInt(config.updateInterval, 10) || 1000
@@ -63,6 +67,8 @@ module.exports = function (RED) {
     let lastMemory = { ram: null, swap: null };
     let lastDisk = { summary: null, items: [] };
     let lastNetwork = { summary: null, items: [] };
+    let lastGpu = { available: null, summary: null, gpus: [], processes: [] };
+    let lastProcesses = { summary: null, items: [] };
 
     async function tick() {
       if (busy) {
@@ -78,6 +84,8 @@ module.exports = function (RED) {
         const memoryPromise = memorySampler.getMetrics();
         const diskPromise = diskSampler.getMetrics();
         const networkPromise = networkSampler.getMetrics();
+        const gpuPromise = gpuSampler.getMetrics();
+        const processesPromise = processSampler.getMetrics();
         const taskThreadPromise = needsTaskThreadRefresh
           ? getTaskThreadCounts()
           : null;
@@ -98,6 +106,16 @@ module.exports = function (RED) {
         } catch (err) {
           node.debug?.(`network read failed: ${err.message}`);
         }
+        try {
+          lastGpu = await gpuPromise;
+        } catch (err) {
+          node.debug?.(`gpu read failed: ${err.message}`);
+        }
+        try {
+          lastProcesses = await processesPromise;
+        } catch (err) {
+          node.debug?.(`process read failed: ${err.message}`);
+        }
 
         if (needsTaskThreadRefresh) {
           try {
@@ -117,6 +135,8 @@ module.exports = function (RED) {
           memory: lastMemory,
           disk: lastDisk,
           network: lastNetwork,
+          gpu: lastGpu,
+          processes: lastProcesses,
         };
 
         const msg = { payload };
