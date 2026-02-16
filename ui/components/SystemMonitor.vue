@@ -700,6 +700,7 @@ function getCpuColumns(cpuCount) {
   align-items: center;
   gap: 3px;
   min-width: 0;
+  min-height: 12px;
 }
 
 .cpu-id {
@@ -728,9 +729,14 @@ function getCpuColumns(cpuCount) {
 }
 
 .cpu-mini-value {
-  width: 24px;
+  width: 32px;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  line-height: 1;
+  white-space: nowrap;
   font-size: 10px;
-  text-align: right;
   color: rgba(0, 0, 0, 0.75);
 }
 
@@ -948,11 +954,15 @@ function getCpuColumns(cpuCount) {
   display: grid;
   grid-template-columns: minmax(240px, 35fr) minmax(320px, 65fr);
   gap: 8px;
+  --bottom-panels-height: 550px;
 }
 
 .gpu-panel {
   grid-column: 1;
   gap: 6px;
+  min-height: var(--bottom-panels-height);
+  max-height: var(--bottom-panels-height);
+  overflow: auto;
 }
 
 .process-panel {
@@ -960,7 +970,8 @@ function getCpuColumns(cpuCount) {
   display: flex;
   flex-direction: column;
   gap: 6px;
-  min-height: 0;
+  min-height: var(--bottom-panels-height);
+  max-height: var(--bottom-panels-height);
 }
 
 .process-table {
@@ -968,6 +979,7 @@ function getCpuColumns(cpuCount) {
   flex-direction: column;
   gap: 0;
   min-height: 0;
+  flex: 1;
   border: 1px solid rgba(0, 0, 0, 0.1);
   border-radius: 6px;
   overflow: hidden;
@@ -978,7 +990,8 @@ function getCpuColumns(cpuCount) {
   display: flex;
   flex-direction: column;
   gap: 0;
-  max-height: 330px;
+  flex: 1;
+  min-height: 0;
   overflow: auto;
   padding-right: 1px;
 }
@@ -1264,6 +1277,12 @@ function getCpuColumns(cpuCount) {
 
   .gpu-section {
     grid-template-columns: 1fr;
+  }
+
+  .gpu-panel,
+  .process-panel {
+    min-height: 0;
+    max-height: none;
   }
 
   .process-panel {
