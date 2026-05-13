@@ -188,14 +188,42 @@ function parseProcessRows(raw, gpuByUuid) {
   return rows;
 }
 
+const DEFAULT_OPTIONS = {
+  refreshMs: 2000,
+};
+
 class GpuSampler extends Sampler {
-  constructor() {
+  constructor(options = {}) {
     super();
+    this.options = { ...DEFAULT_OPTIONS, ...options };
     this.available = null;
     this.unavailableReason = null;
+    this.lastResult = null;
+    this.lastRefresh = 0;
+    this.inFlight = null;
   }
 
   async getMetrics() {
+    const now = Date.now();
+    if (this.lastResult && now - this.lastRefresh < this.options.refreshMs) {
+      return this.lastResult;
+    }
+    if (this.inFlight) {
+      return this.inFlight;
+    }
+    this.inFlight = this._collect()
+      .then((result) => {
+        this.lastResult = result;
+        this.lastRefresh = Date.now();
+        return result;
+      })
+      .finally(() => {
+        this.inFlight = null;
+      });
+    return this.inFlight;
+  }
+
+  async _collect() {
     const timestamp = Date.now();
 
     if (this.available === false) {

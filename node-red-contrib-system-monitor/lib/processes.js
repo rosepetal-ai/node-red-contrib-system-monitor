@@ -11,8 +11,9 @@ const PAGE_SIZE_BYTES = 4096;
 
 const DEFAULT_OPTIONS = {
   userRefreshMs: 5 * 60 * 1000,
-  readConcurrency: 48,
+  readConcurrency: 16,
   topPerMetric: 50,
+  refreshMs: 2500,
 };
 
 function parseTotalCpuTicks(raw) {
@@ -195,6 +196,9 @@ class ProcessSampler extends Sampler {
     this.lastUserRefresh = 0;
     this.prevProcessTicks = new Map();
     this.prevTotalTicks = null;
+    this.lastResult = null;
+    this.lastRefresh = 0;
+    this.inFlight = null;
   }
 
   async refreshUsers(now) {
@@ -254,6 +258,26 @@ class ProcessSampler extends Sampler {
   }
 
   async getMetrics() {
+    const now = Date.now();
+    if (this.lastResult && now - this.lastRefresh < this.options.refreshMs) {
+      return this.lastResult;
+    }
+    if (this.inFlight) {
+      return this.inFlight;
+    }
+    this.inFlight = this._collect()
+      .then((result) => {
+        this.lastResult = result;
+        this.lastRefresh = Date.now();
+        return result;
+      })
+      .finally(() => {
+        this.inFlight = null;
+      });
+    return this.inFlight;
+  }
+
+  async _collect() {
     const timestamp = Date.now();
     const [procStatRaw, procEntries] = await Promise.all([
       fs.readFile(path.join(PROC_PATH, "stat"), "utf8"),
@@ -282,7 +306,11 @@ class ProcessSampler extends Sampler {
 
     const items = [];
     const nextProcessTicks = new Map();
+    const YIELD_EVERY = 250;
     for (let i = 0; i < snapshots.length; i += 1) {
+      if (i > 0 && i % YIELD_EVERY === 0) {
+        await new Promise((resolve) => setImmediate(resolve));
+      }
       const snapshot = snapshots[i];
       if (!snapshot) {
         continue;
@@ -317,6 +345,7 @@ class ProcessSampler extends Sampler {
     this.prevTotalTicks = Number.isFinite(totalTicks) ? totalTicks : this.prevTotalTicks;
     this.prevProcessTicks = nextProcessTicks;
 
+    await new Promise((resolve) => setImmediate(resolve));
     const selectedItems = pickTopUnion(items, this.options.topPerMetric);
 
     return {
