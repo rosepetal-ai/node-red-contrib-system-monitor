@@ -4,6 +4,15 @@ System monitor widget for **Node-RED Dashboard 2** (Linux-focused, NVIDIA GPU su
 
 ![System monitor widget preview](docs/images/system-monitor-dashboard.gif)
 
+## Documentation
+
+| Page | Contents |
+|------|----------|
+| [Overview](docs/index.md) | Installation, requirements, quick start and what each panel shows |
+| [system-monitor](docs/system-monitor.md) | Reference of the widget: configuration, the columns of each panel, design notes, troubleshooting, development |
+
+The same pages are published at <https://docs.rosepetal.ai/flows/node-red-contrib-system-monitor>.
+
 ## What it shows
 
 - **CPU**: per-core usage bars, average usage, tasks, threads, load average, uptime.

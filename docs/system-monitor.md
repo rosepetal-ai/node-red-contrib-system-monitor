@@ -1,6 +1,7 @@
 ---
 title: "System Monitor - Real-Time System Dashboard Widget"
 description: "Display-only system monitoring widget for Node-RED Dashboard 2 showing CPU, memory, disk, network, GPU (NVIDIA), and process information on Linux systems with @rosepetal/node-red-dashboard-2-system-monitor."
+sidebar_position: 1
 head:
   - - meta
     - name: "keywords"
@@ -57,9 +58,12 @@ The widget appears as **system-monitor** in the Dashboard category of the Node-R
 
 | Field | Description | Default |
 |---|---|---|
+| **Name** | Title shown at the top of the widget; `Usage / core` when empty. | — |
 | **Group** | Dashboard 2 group where the widget is rendered. Required. | — |
 | **Size** | Standard Dashboard 2 widget size. | — |
 | **Update interval (ms)** | How often metrics are refreshed. Values below 250 ms are clamped to 250 ms. | `1000` |
+
+Not everything is read on every update. The process table is refreshed at most every 2.5 s, GPU data at most every 2 s, disk usage and the state and link capacity of the interfaces at most every 5 s, and the list of mounts at most every 15 s.
 
 ## Panels
 
@@ -92,7 +96,7 @@ A table of mounted filesystems with I/O rates:
 |---|---|
 | **Mount** | Mountpoint path (hover shows source device) |
 | **FS** | Filesystem type (ext4, xfs, etc.) |
-| **Used** | Visual usage bar with percentage |
+| **Used** | Visual usage bar |
 | **Used** | Used bytes in human-readable format |
 | **Total** | Total bytes in human-readable format |
 | **Read/s** | Delta-based read throughput per second |
@@ -114,11 +118,11 @@ A table of physical network interfaces:
 | **Rx Total** | Total bytes received since boot |
 | **Tx Total** | Total bytes transmitted since boot |
 
-Virtual and internal interfaces are filtered out. This includes loopback (`lo`), Docker bridges (`docker*`, `br-*`), virtual Ethernet pairs (`veth*`), and similar non-physical interfaces. Data is sourced from `/sys/class/net`.
+Virtual and internal interfaces are filtered out. This includes loopback (`lo`), Docker bridges (`docker*`, `br-*`), virtual Ethernet pairs (`veth*`), and similar non-physical interfaces. Counters are read from `/proc/net/dev`; state and link capacity from `/sys/class/net`.
 
 ### GPU
 
-Shown only when NVIDIA tooling is available. Displays one card per detected GPU:
+Displays one card per detected GPU when NVIDIA tooling is available:
 
 - **Utilization**: GPU compute utilization bar with percentage.
 - **VRAM**: Video memory usage bar with percentage.
@@ -140,7 +144,7 @@ When `nvidia-smi` is not found in `PATH`, the GPU section displays a message ind
 
 ### Processes
 
-An htop-style process table showing the most resource-intensive processes. Column headers for VIRT, RES, SHR, and CPU are clickable to sort (ascending/descending toggle).
+An htop-style process table showing the most resource-intensive processes. Column headers for VIRT, RES, SHR, and CPU are clickable to sort by that column, highest first (CPU by default).
 
 | Column | Description |
 |---|---|
@@ -153,7 +157,7 @@ An htop-style process table showing the most resource-intensive processes. Colum
 | **Type** | Process state type |
 | **Command** | Command line |
 
-The process list is built from the **union of the top 50 processes** ranked independently by VIRT, RES, SHR, and CPU. This union strategy ensures that both memory-heavy and CPU-heavy processes are always visible without scanning every process on the system.
+The process list is built from the **union of the top 50 processes** ranked independently by VIRT, RES, SHR, and CPU. This union strategy ensures that both memory-heavy and CPU-heavy processes are always visible without sending every process to the dashboard.
 
 ## Design Notes
 
@@ -167,7 +171,7 @@ CPU percentages, disk read/write throughput, network throughput, and per-process
 
 ### Process filtering
 
-Rather than reading all processes (which can number in the thousands), the sampler collects the top 50 by each of four metrics (VIRT, RES, SHR, CPU) and takes the union. This keeps the data set small enough for efficient rendering while capturing the most relevant processes.
+The sampler reads every process under `/proc` (they can number in the thousands), but sends only the union of the top 50 by each of four metrics (VIRT, RES, SHR, CPU). This keeps the data set small enough for efficient rendering while capturing the most relevant processes. Since 1.0.2 the scan runs at most every 2.5 s and yields to the event loop every 250 processes.
 
 ### Task/thread refresh throttling
 
@@ -193,7 +197,7 @@ Each sampler is wrapped in its own try/catch block. If one subsystem fails (e.g.
 ```bash
 npm install     # Install dependencies
 npm run build   # Build the Vue 3 frontend with Vite
-npm run dev     # Development mode with hot reload
+npm run dev     # Development build, rebuilt on every change
 ```
 
 The frontend is a Vue 3 single-file component (`ui/components/SystemMonitor.vue`) bundled with Vite. The backend consists of modular samplers under `node-red-contrib-system-monitor/lib/` (cpu, memory, disk, network, gpu, processes), each exposing a `create()` factory and a `getMetrics()` method.
@@ -205,10 +209,10 @@ node-red-contrib-system-monitor/
   system-monitor.js          # Node-RED node registration and tick loop
   system-monitor.html        # Editor UI definition
   lib/
-    cpu.js                   # CPU per-core usage from /proc/stat
+    cpu.js                   # CPU per-core usage from os.cpus()
     memory.js                # RAM and swap from /proc/meminfo
-    disk.js                  # Mountpoints and I/O from /proc/mounts, /proc/diskstats
-    network.js               # Interface stats from /sys/class/net
+    disk.js                  # Mountpoints and I/O from /proc/self/mountinfo, /proc/diskstats
+    network.js               # Interface stats from /proc/net/dev, /sys/class/net
     gpu.js                   # NVIDIA GPU via nvidia-smi
     processes.js             # Process table from /proc/[pid]/
 ui/
