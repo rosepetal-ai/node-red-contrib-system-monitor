@@ -15,7 +15,7 @@ head:
 
 # System Monitor Widget for Node-RED Dashboard 2
 
-`@rosepetal/node-red-dashboard-2-system-monitor` provides 1 widget for Node-RED Dashboard 2 that shows the CPU, memory, disk, network, NVIDIA GPU and process metrics of the Linux host where Node-RED runs.
+`@rosepetal/node-red-dashboard-2-system-monitor` provides one widget for Node-RED Dashboard 2 that shows the CPU, memory, disk, network, NVIDIA GPU and process metrics of the Linux host where Node-RED runs.
 
 ![System monitor widget on a dashboard: CPU usage per core, memory, network, disk, GPU and process panels](./images/system-monitor-dashboard.gif)
 
@@ -26,7 +26,7 @@ cd ~/.node-red
 npm install @rosepetal/node-red-dashboard-2-system-monitor
 ```
 
-Or search `@rosepetal/node-red-dashboard-2-system-monitor` in the Node-RED Palette Manager.
+Restart Node-RED after installing from the command line. Or search `@rosepetal/node-red-dashboard-2-system-monitor` in the Node-RED Palette Manager.
 
 The npm package is not named after the repository: the repository is `node-red-contrib-system-monitor`, the package is `@rosepetal/node-red-dashboard-2-system-monitor`.
 
@@ -36,7 +36,7 @@ The npm package is not named after the repository: the repository is `node-red-c
 - Node-RED Dashboard 2 (`@flowfuse/node-red-dashboard`) in the same Node-RED; the package does not declare it as a dependency, so install it as well
 - Node-RED >= 3.0.0, the minimum of Dashboard 2 (the package itself declares >= 1.0.0)
 - Linux: the metrics are read from `/proc` and `/sys/class/net`
-- `nvidia-smi` in the `PATH` *(optional, for the GPU panel)*
+- `nvidia-smi` in the `PATH` of the Node-RED process *(optional, for the GPU panel)*
 
 ## Nodes
 
@@ -62,13 +62,14 @@ The **Name** of the node is the title of the widget; without a name the title is
 | **Memory** | RAM and swap usage bars with used and total values |
 | **Disk** | Mountpoint, filesystem, usage bar, used and total bytes, read/s and write/s |
 | **Network** | Interface state, link capacity, down/s and up/s, received and transmitted totals |
-| **GPU** | Per NVIDIA GPU: utilization, VRAM usage, temperature, power, fan and P-state, plus the VRAM of each GPU process |
+| **GPU** | Per NVIDIA GPU: utilization, VRAM usage, temperature, power, fan and P-state, plus the VRAM of each compute process |
 | **Processes** | htop-style table with PID, user, VIRT, RES, SHR, CPU, state and command, sortable by VIRT, RES, SHR or CPU |
 
-- Without `nvidia-smi` the GPU panel shows `GPU metrics unavailable` and the other panels work as usual.
-- The network panel leaves out `lo` and the interfaces named like virtual ones (`docker0`, `veth*`, `br-*`, `virbr*`, `tun*`, `tap*` and similar).
+- Without `nvidia-smi` the GPU panel shows `GPU metrics unavailable (nvidia-smi not found)` and the other panels work as usual.
+- The network panel leaves out `lo` and the interfaces named like virtual ones (`docker0`, `veth*`, `br-*`, `virbr*`, `tailscale*`, `tun*`, `tap*` and similar).
 - The disk panel lists the filesystems mounted from a device under `/dev/`, without pseudo filesystems, snap mounts and loop devices.
 - The process table holds the union of the top 50 processes by VIRT, by RES, by SHR and by CPU, not every process.
+- The metrics are sampled on the Node-RED server for as long as the node is deployed, whether or not a dashboard is open, and every browser sees the same data.
 
 See [Panels](./system-monitor.md#panels) for the columns of each panel and [Troubleshooting](./system-monitor.md#troubleshooting) for common problems.
 
