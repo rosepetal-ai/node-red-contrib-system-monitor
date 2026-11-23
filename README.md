@@ -4,6 +4,15 @@ System monitor widget for **Node-RED Dashboard 2** (Linux-focused, NVIDIA GPU su
 
 ![System monitor widget preview](docs/images/system-monitor-dashboard.gif)
 
+## Documentation
+
+| Page | Contents |
+|------|----------|
+| [Overview](docs/index.md) | Installation, requirements, quick start and what each panel shows |
+| [system-monitor](docs/system-monitor.md) | Reference of the widget: configuration, the columns of each panel, design notes, troubleshooting, development |
+
+The same pages are published at <https://docs.rosepetal.ai/flows/node-red-contrib-system-monitor>.
+
 ## What it shows
 
 - **CPU**: per-core usage bars, average usage, tasks, threads, load average, uptime.
@@ -23,7 +32,7 @@ System monitor widget for **Node-RED Dashboard 2** (Linux-focused, NVIDIA GPU su
 ## Requirements
 
 - Node.js (same version supported by your Node-RED runtime)
-- Node-RED `>= 1.0.0`
+- Node-RED `>= 3.0.0` (the minimum of Dashboard 2)
 - Node-RED Dashboard 2 (`@flowfuse/node-red-dashboard`)
 - Linux with `/proc` and `/sys/class/net`
 - Optional for GPU: `nvidia-smi` available in PATH
@@ -41,6 +50,7 @@ Or install from the Node-RED Palette Manager using the same package name.
 The widget appears as `system-monitor` in the dashboard category.
 
 Config fields:
+- **Name**: title of the widget (`Usage / core` when empty).
 - **Group**: Dashboard 2 group where the widget is rendered.
 - **Size**: standard Dashboard 2 widget size.
 - **Update interval (ms)**: refresh period (minimum effective value is `250 ms`, default `1000 ms`).
